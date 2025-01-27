@@ -72,7 +72,6 @@ library(biomaRt)
 
 #Using Ensembl as the database
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-
 #Fetch gene names corresponding to Ensembl IDs
 ensembl_id_KO22 <- count_data[,1]
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
@@ -161,3 +160,4 @@ ggplot(results_plenti_vs_KO23, aes(x = log2FoldChange, y = logP, color = signifi
        y = "-log10 P-value") +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
+
