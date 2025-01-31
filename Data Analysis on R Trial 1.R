@@ -23,6 +23,9 @@ BiocManager:: install("EnhancedVolcano")
 #install biomaRt
 BiocManager::install("biomaRt")
 
+#install vscDebugger
+install.packages("vscDebugger", repos = "https://manuelhentschel.r-universe.dev")
+
 #Load necessary libraries
 library(DESeq2)
 library(dplyr)
