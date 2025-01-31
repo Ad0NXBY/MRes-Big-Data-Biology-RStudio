@@ -1,5 +1,4 @@
 #PREPROCESSING============================================
-
 #Installation of ggplot2
 install.packages("ggplot2") # for plotting
 
@@ -23,7 +22,7 @@ BiocManager:: install("EnhancedVolcano")
 #install biomaRt
 BiocManager::install("biomaRt")
 
-#install vscDebugger
+#install vscDebugger for VSCode
 install.packages("vscDebugger", repos = "https://manuelhentschel.r-universe.dev")
 
 #Load necessary libraries
