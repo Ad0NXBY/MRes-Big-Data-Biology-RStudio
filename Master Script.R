@@ -13,7 +13,6 @@ library(DESeq2)           # For differential gene expression analysis
 library(dplyr)            # For data manipulation
 library(ggplot2)          # For plotting
 library(tidyverse)        # For data science tasks
-library(EnhancedVolcano)  # For creating volcano plots
 library(biomaRt)          # For accessing BioMart databases
 
 #define file path
@@ -27,8 +26,6 @@ counts_list <- lapply(files, function(file) {
   colnames(df) <- c("Geneid", basename(file))
   return(df)
 })
-
-View(counts_list[[1]])
 
 #Extract Gene list
 Genelist <- as.data.frame(counts_list[[1]][["Geneid"]])
@@ -86,7 +83,7 @@ dds <- DESeq(dds)
 #Transform the data for PCA
 vsd <- vst(dds, blind = FALSE) #variance stabilizing transformation
 
-#PCA PLOT ===========================
+#PCA PLOT ====================================================================
 
 #Generate a PCA plot
 plotPCA(vsd, intgroup = "condition") +
