@@ -173,3 +173,4 @@ ggplot(volcano_data_23, aes(x = log2FoldChange, y = -log10(padj), color = Signif
   labs(title = "Volcano Plot (Plenti vs KO23) - Top 15 Up & Downregulated Genes", 
        x = "Log2 Fold Change", y = "-Log10 Adjusted P-value") +
   theme_minimal()
+
