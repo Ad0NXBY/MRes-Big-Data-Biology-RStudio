@@ -57,11 +57,11 @@ condition <- factor(c(rep("plenti", 3), rep("KO22", 3), rep("KO23",3)))
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 
 #Fetch gene names corresponding to Ensembl IDs
-ensembl_id_KO22 <- count_data[,1]
+ensembl_id_KO22_KO23 <- count_data[,1]
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 gene_mapping <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"),
                       filters = "ensembl_gene_id",
-                      values = ensembl_id_KO22,
+                      values = ensembl_id_KO22_KO23,
                       mart = mart)
 
 #Change colname of gene_mapping to Geneid names for leftjoin to work
@@ -83,12 +83,32 @@ dds <- DESeq(dds)
 #Transform the data for PCA
 vsd <- vst(dds, blind = FALSE) #variance stabilizing transformation
 
-#PCA PLOT ====================================================================
+#SCREE & PCA PLOT ====================================================================
+##Scree plot --------------------------------------------------------------------------------
+DS1.svd <- assay(vsd) |> 
+  t() |> 
+  prcomp(scale = FALSE) # PCA using prcomp()
+summary(DS1.svd)
 
-#Generate a PCA plot
-plotPCA(vsd, intgroup = "condition") +
-  ggtitle("PCA Plot of RNA-Seq Data")
+pScree <- fviz_eig(DS1.svd, addlabels = TRUE) + 
+  theme_pubr(base_size = 9)
 
+# PCA Plot with colors
+pPCA <- fviz_pca_ind(DS1.svd, 
+                     label = "all",  # Ensure all labels are visible
+                     habillage = condition,  # Color by condition
+                     repel = TRUE, # Prevent label overlap
+                     mean.point = FALSE) +  #remove centroid marker
+  labs(title = "PCA Plot",
+       x = "PC1",
+       y = "PC2")
+
+# Arrange plots
+pScreePCA <- ggarrange(pScree, pPCA,
+                       labels = c("A", "B"),
+                       ncol = 2, nrow = 1)
+
+print(pScreePCA)
 #DESeq2 results for comparisons
 #plenti vs KO22
 results_plenti_vs_KO22 <- results(dds, contrast = c("condition", "KO22", "plenti"))
