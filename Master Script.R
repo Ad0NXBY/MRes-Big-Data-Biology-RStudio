@@ -1,6 +1,8 @@
 #Installing the necessary packages
 install.packages("ggplot2")# ggplot2: A system for declaratively creating graphics, based on The Grammar of Graphics.
 install.packages("tidyverse")# tidyverse: A collection of R packages designed for data science.
+install.packages("factoextra")
+install.packages("ggpubr")
 if (!require("BiocManager", quietly = TRUE))# BiocManager: A package to manage the installation of Bioconductor packages.
   install.packages("BiocManager")
 BiocManager::install("GenomicFeatures")# GenomicFeatures: Tools for making and manipulating transcript centric annotations.
@@ -14,6 +16,8 @@ library(dplyr)            # For data manipulation
 library(ggplot2)          # For plotting
 library(tidyverse)        # For data science tasks
 library(biomaRt)          # For accessing BioMart databases
+library(factoextra)
+library(ggpubr)
 
 #define file path
 files <- list.files("C:/Users/Brandon/Documents/MRes Big Data Biology/Data analysis/ChenY_RNA_seq/Feature counts",
@@ -117,6 +121,9 @@ summary(results_plenti_vs_KO22) #summary of results
 results_plenti_vs_KO23 <- results(dds, contrast = c("condition", "KO23", "plenti"))
 summary(results_plenti_vs_KO23) #summary of results
 
+# Save results
+write.csv(as.data.frame(results_plenti_vs_KO22), "DEG_plenti_vs_KO22.csv")
+write.csv(as.data.frame(results_plenti_vs_KO23), "DEG_plenti_vs_KO23.csv")
 
 #Volcano Plot==============================================================
 ##Volcano plot of Plent vs KO22---------------------------
