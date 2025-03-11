@@ -114,6 +114,7 @@ pScreePCA <- ggarrange(pScree, pPCA,
                        ncol = 2, nrow = 1)
 
 print(pScreePCA)
+ggsave("PCA_ScreePlot.png", plot = pScreePCA, width = 20, height = 10)
 #DESeq2 results for comparisons
 #plenti vs KO22
 results_plenti_vs_KO22 <- results(dds, contrast = c("condition", "KO22", "plenti"))
@@ -153,7 +154,7 @@ top_downregulated_22 <- volcano_data_22 %>%
 top_genes_22 <- rbind(top_upregulated_22, top_downregulated_22)
 
 ###Create the volcano plot
-ggplot(volcano_data_22, aes(x = log2FoldChange, y = -log10(padj), color = Significance, label = Gene)) +
+Volcano_Plot_Plenti_v_KO22 <- ggplot(volcano_data_22, aes(x = log2FoldChange, y = -log10(padj), color = Significance, label = Gene)) +
   geom_point(alpha = 0.7) +
   scale_color_manual(values = c("Not Significant" = "grey", "Upregulated" = "red", "Downregulated" = "blue")) + 
   geom_vline(xintercept = c(-log2(2), log2(2)), linetype = "dashed", color = "black") + #FC threshold
@@ -164,7 +165,7 @@ ggplot(volcano_data_22, aes(x = log2FoldChange, y = -log10(padj), color = Signif
   labs(title = "Volcano Plot (Plenti vs KO22) - Top 15 Up & Downregulated Genes", 
        x = "Log2 Fold Change", y = "-Log10 Adjusted P-value") +
   theme_minimal()
-
+ggsave("Volcano_Plot_Plenti_vs_KO22.png", plot = Volcano_Plot_Plenti_v_KO22, width = 10, height = 6)
 ##Volcano plot of Plent vs KO23---------------------------
 ###Ensure gene names are set as rownames
 rownames(results_plenti_vs_KO23) <- count_data$label
@@ -191,7 +192,7 @@ top_downregulated_23 <- volcano_data_23 %>%
 top_genes_23 <- rbind(top_upregulated_23, top_downregulated_23)
 
 ###Volcano plot for KO23
-ggplot(volcano_data_23, aes(x = log2FoldChange, y = -log10(padj), color = Significance, label = Gene)) +
+Volcano_Plot_Plenti_v_KO23 <- ggplot(volcano_data_23, aes(x = log2FoldChange, y = -log10(padj), color = Significance, label = Gene)) +
   geom_point(alpha = 0.7) +
   scale_color_manual(values = c("Not Significant" = "grey", "Upregulated" = "red", "Downregulated" = "blue")) + 
   geom_vline(xintercept = c(-log2(2), log2(2)), linetype = "dashed", color = "black") +
@@ -201,6 +202,7 @@ ggplot(volcano_data_23, aes(x = log2FoldChange, y = -log10(padj), color = Signif
   labs(title = "Volcano Plot (Plenti vs KO23) - Top 15 Up & Downregulated Genes", 
        x = "Log2 Fold Change", y = "-Log10 Adjusted P-value") +
   theme_minimal()
+ggsave("Volcano_Plot_Plenti_vs_KO23.png", plot = Volcano_Plot_Plenti_v_KO23, width = 10, height = 6)
 
 #GENE ONTOLOGY==================================================================
 # Load necessary libraries for GO analysis for KO22
