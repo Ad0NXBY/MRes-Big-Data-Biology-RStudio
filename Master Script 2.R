@@ -132,10 +132,17 @@ results_plenti_vs_KO22 <- results(dds, contrast = c("condition", "KO22", "plenti
   as.data.frame() %>%
   na.omit()  # Removes NA in padj
 
+# Calculate ranking metric
+results_plenti_vs_KO22$ranking_metric <- sign(results_plenti_vs_KO22$log2FoldChange) * (-log10(results_plenti_vs_KO22$padj))
+
 #plenti vs KO23
 results_plenti_vs_KO23 <- results(dds, contrast = c("condition", "KO23", "plenti")) %>%
   as.data.frame() %>%
   na.omit()  # Removes NA in padj
+
+# Calculate ranking metric
+results_plenti_vs_KO23$ranking_metric <- sign(results_plenti_vs_KO23$log2FoldChange) * (-log10(results_plenti_vs_KO23$padj))
+
 # Save results
 write.csv(as.data.frame(results_plenti_vs_KO22), "DEG_plenti_vs_KO22.csv")
 write.csv(as.data.frame(results_plenti_vs_KO23), "DEG_plenti_vs_KO23.csv")
@@ -143,56 +150,56 @@ write.csv(as.data.frame(results_plenti_vs_KO23), "DEG_plenti_vs_KO23.csv")
 #Prepare GSEA ranked lists (.rnk files)
 library(org.Hs.eg.db)
 
-# For KO22 vs plenti
-ranked_list_KO22 <- results_plenti_vs_KO22 %>%
-  rownames_to_column("Geneid") %>%
-  dplyr::mutate(
-    EntrezID = mapIds(
-      org.Hs.eg.db,
-      keys = Geneid,
-      column = "ENTREZID",
-      keytype = "ENSEMBL",
-      multiVals = "first"
-    )
-  ) %>%
-  dplyr::filter(!is.na(EntrezID)) %>%
-  dplyr::select(EntrezID, log2FoldChange) %>%
-  dplyr::arrange(desc(log2FoldChange))
+# Map Ensembl IDs to Entrez IDs
+results_plenti_vs_KO22$EntrezID <- mapIds(
+  org.Hs.eg.db,
+  keys = rownames(results_plenti_vs_KO22),
+  column = "ENTREZID",
+  keytype = "ENSEMBL",
+  multiVals = "first"
+)
 
+# Remove unmapped genes and sort
+ranked_list_KO22 <- results_plenti_vs_KO22 %>%
+  dplyr::filter(!is.na(EntrezID)) %>%
+  dplyr::select(EntrezID, ranking_metric) %>%
+  dplyr::arrange(desc(ranking_metric))  # Sort descending
+
+# Save as .rnk file
 write.table(
   ranked_list_KO22,
-  file = "GSEA_ranked_list_KO22.rnk",
+  file = "GSEA_ranked_list_KO22_padj.rnk",
   sep = "\t",
   col.names = FALSE,
   row.names = FALSE,
   quote = FALSE
 )
 
-# For KO23 vs plenti (repeat similarly)
-ranked_list_KO23 <- results_plenti_vs_KO23 %>%
-  rownames_to_column("Geneid") %>%
-  dplyr::mutate(
-    EntrezID = mapIds(
-      org.Hs.eg.db,
-      keys = Geneid,
-      column = "ENTREZID",
-      keytype = "ENSEMBL",
-      multiVals = "first"
-    )
-  ) %>%
-  dplyr::filter(!is.na(EntrezID)) %>%
-  dplyr::select(EntrezID, log2FoldChange) %>%
-  dplyr::arrange(desc(log2FoldChange))
 
+# Map Ensembl IDs to Entrez IDs
+results_plenti_vs_KO23$EntrezID <- mapIds(
+  org.Hs.eg.db,
+  keys = rownames(results_plenti_vs_KO23),
+  column = "ENTREZID",
+  keytype = "ENSEMBL",
+  multiVals = "first"
+)
+
+# Remove unmapped genes and sort
+ranked_list_KO23 <- results_plenti_vs_KO23 %>%
+  dplyr::filter(!is.na(EntrezID)) %>%
+  dplyr::select(EntrezID, ranking_metric) %>%
+  dplyr::arrange(desc(ranking_metric))  # Sort descending
+
+# Save as .rnk file
 write.table(
   ranked_list_KO23,
-  file = "GSEA_ranked_list_KO23.rnk",
+  file = "GSEA_ranked_list_KO23_padj.rnk",
   sep = "\t",
   col.names = FALSE,
   row.names = FALSE,
   quote = FALSE
 )
-
 
 #VOLCANO PLOT===================================================================
 ##Volcano plot of Plent vs KO22---------------------------
