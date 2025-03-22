@@ -1,5 +1,5 @@
 #PREPROCESSING==================================================================
-#Installing the necessary packages
+##Installing the necessary packages---------------------------------------------
 install.packages("ggplot2")# ggplot2: A system for declaratively creating graphics, based on The Grammar of Graphics.
 install.packages("tidyverse")# tidyverse: A collection of R packages designed for data science.
 install.packages("factoextra")
@@ -11,7 +11,7 @@ BiocManager::install("DESeq2")# DESeq2: Differential gene expression analysis ba
 BiocManager::install("EnhancedVolcano")# EnhancedVolcano: Publication-ready volcano plots.
 BiocManager::install("biomaRt")# biomaRt: Interface to BioMart databases.
 
-# Load necessary libraries
+##Load necessary libraries------------------------------------------------------
 library(DESeq2)           # For differential gene expression analysis
 library(dplyr)            # For data manipulation
 library(ggplot2)          # For plotting
@@ -20,18 +20,18 @@ library(biomaRt)          # For accessing BioMart databases
 library(factoextra)
 library(ggpubr)
 
-#Create output directories
+##Create output directories-----------------------------------------------------
 plot_dir <- "Analysis_plots"
 data_dir <- "List_for_analysis"
 
 dir.create(plot_dir, showWarnings = FALSE)
 dir.create(data_dir, showWarnings = FALSE)
 
-#define file path
+##Define file path--------------------------------------------------------------
 files <- list.files("C:/Users/Brandon/Documents/MRes Big Data Biology/Data analysis/ChenY_RNA_seq/Feature counts",
                     pattern = "*.txt", full.names = TRUE)
 
-#read each file into a list of dataframes
+##Read each file into a list of dataframes--------------------------------------
 counts_list <- lapply(files, function(file) {
   df <- read.table(file, header = TRUE)
   df <- df %>% select(Geneid, ends_with(".bam"))
@@ -50,11 +50,11 @@ merged_counts <- Reduce(function(x, y) merge(x, y, by = "Geneid", all = TRUE), c
 nonzero_counts <- merged_counts[rowSums(merged_counts[, -1]) > 0, ]  # Exclude Geneid column
 merged_counts <- nonzero_counts
 
-# Extract updated Gene list after filtering
+#Extract updated Gene list after filtering
 Genelist <- as.data.frame(merged_counts$Geneid)
 colnames(Genelist) <- "Gene"
 
-# Combine counts and gene list
+#Combine counts and gene list
 Counts_gene <- cbind(Genelist, merged_counts)
 
 
@@ -75,7 +75,7 @@ write.table(Counts_gene2, file.path(data_dir, "merged_featurecounts2.txt"), sep 
 #Read in merged count file
 count_data <- Counts_gene2  
 
-#create metadata dataframe from experimental design
+##Create metadata dataframe from experimental design-----------------------------
 #plenti(wildtype) is A1-A3, KO22 is B1-B3, KO23 is C1-C3
 condition <- factor(c(rep("plenti", 3), rep("KO22", 3), rep("KO23",3)))
 
@@ -99,8 +99,7 @@ count_data<-count_data %>% mutate("label"=case_when(is.na(`Official gene symbol`
                                                     is.na(`Official gene symbol`)==FALSE ~ `Official gene symbol`))
 
 #DESEQ2=========================================================================
-#Create DESeq2 dataset object
-# Create DESeq2 dataset object (with row names)
+##Create DESeq2 dataset object (with row names)---------------------------------
 dds <- DESeqDataSetFromMatrix(
   countData = Counts_gene[, 3:11],  # Columns 3-11: count data
   colData = data.frame(condition),  # Metadata
@@ -113,25 +112,25 @@ dds <- DESeq(dds)
 vsd <- vst(dds, blind = FALSE) #variance stabilizing transformation
 
 #DEG LIST for GSEA==============================================================
-# Load required library
+##Load required library---------------------------------------------------------
 library(org.Hs.eg.db)
 
-# Extract DESeq2 results for KO22 vs plenti
+##Extract DESeq2 results for KO22 vs plenti-------------------------------------
 results_plenti_vs_KO22 <- results(dds, contrast = c("condition", "KO22", "plenti")) %>%
   as.data.frame() %>%
   na.omit()  # Remove genes with NA in padj
 
-# Calculate ranking metric: -log10(padj)
+#Calculate ranking metric: -log10(padj)
 results_plenti_vs_KO22$ranking_metric <- -log10(results_plenti_vs_KO22$padj)
 
-# Handle padj = 0 (replace with smallest non-zero padj to avoid -Inf)
+#Handle padj = 0 (replace with smallest non-zero padj to avoid -Inf)
 if (any(results_plenti_vs_KO22$padj == 0)) {
   min_padj <- min(results_plenti_vs_KO22$padj[results_plenti_vs_KO22$padj > 0], na.rm = TRUE)
   results_plenti_vs_KO22$padj[results_plenti_vs_KO22$padj == 0] <- min_padj
   results_plenti_vs_KO22$ranking_metric <- -log10(results_plenti_vs_KO22$padj)
 }
 
-# Map Ensembl IDs to gene symbols
+#Map Ensembl IDs to gene symbols
 results_plenti_vs_KO22$GeneSymbol <- mapIds(
   org.Hs.eg.db,
   keys = rownames(results_plenti_vs_KO22),
@@ -140,7 +139,7 @@ results_plenti_vs_KO22$GeneSymbol <- mapIds(
   multiVals = "first"
 )
 
-# Remove genes without valid symbols
+#Remove genes without valid symbols
 results_plenti_vs_KO22_clean <- results_plenti_vs_KO22 %>% 
   dplyr::filter(!is.na(GeneSymbol))
 
@@ -150,7 +149,7 @@ results_plenti_vs_KO22<- results_plenti_vs_KO22_clean %>%
   slice(1) %>%  # Keep the most significant entry per gene
   ungroup()
 
-# Convert to data frame, then set gene symbols as row names
+#Convert to data frame, then set gene symbols as row names
 results_plenti_vs_KO22 <- as.data.frame(results_plenti_vs_KO22)
 rownames(results_plenti_vs_KO22) <- results_plenti_vs_KO22$GeneSymbol
 
@@ -170,10 +169,10 @@ ranked_list_KO22 <- results_plenti_vs_KO22_clean %>%
   arrange(desc(ranking_metric)) %>%  # overall sort by ranking metric if needed
   select(GeneSymbol, ranking_metric)
 
-# Convert to a data frame (since tibbles don't support row names well)
+#Convert to a data frame (since tibbles don't support row names well)
 ranked_list_KO22 <- as.data.frame(ranked_list_KO22)
 
-# Set gene symbols as row names and remove the redundant column
+#Set gene symbols as row names and remove the redundant column
 rownames(ranked_list_KO22) <- ranked_list_KO22$GeneSymbol
 ranked_list_KO22 <-ranked_list_KO22 %>% dplyr::select(-GeneSymbol)
 
@@ -186,22 +185,22 @@ write.table(
   quote = FALSE
 )
 
-# Extract DESeq2 results for KO23 vs plenti
+##Extract DESeq2 results for KO23 vs plenti-------------------------------------
 results_plenti_vs_KO23 <- results(dds, contrast = c("condition", "KO23", "plenti")) %>%
   as.data.frame() %>%
   na.omit()  # Remove genes with NA in padj
 
-# Calculate ranking metric: -log10(padj)
+#Calculate ranking metric: -log10(padj)
 results_plenti_vs_KO23$ranking_metric <- -log10(results_plenti_vs_KO23$padj)
 
-# Handle padj = 0 (replace with smallest non-zero padj to avoid -Inf)
+#Handle padj = 0 (replace with smallest non-zero padj to avoid -Inf)
 if (any(results_plenti_vs_KO23$padj == 0)) {
   min_padj <- min(results_plenti_vs_KO23$padj[results_plenti_vs_KO23$padj > 0], na.rm = TRUE)
   results_plenti_vs_KO23$padj[results_plenti_vs_KO23$padj == 0] <- min_padj
   results_plenti_vs_KO23$ranking_metric <- -log10(results_plenti_vs_KO23$padj)
 }
 
-# Map Ensembl IDs to gene symbols
+#Map Ensembl IDs to gene symbols
 results_plenti_vs_KO23$GeneSymbol <- mapIds(
   org.Hs.eg.db,
   keys = rownames(results_plenti_vs_KO23),
@@ -210,7 +209,7 @@ results_plenti_vs_KO23$GeneSymbol <- mapIds(
   multiVals = "first"
 )
 
-# Remove genes without valid symbols
+#Remove genes without valid symbols
 results_plenti_vs_KO23_clean <- results_plenti_vs_KO23 %>% 
   dplyr::filter(!is.na(GeneSymbol))
 
@@ -220,7 +219,7 @@ results_plenti_vs_KO23 <- results_plenti_vs_KO23_clean %>%
   slice(1) %>%  # Keep the most significant entry per gene
   ungroup()
 
-# Convert to data frame, then set gene symbols as row names
+#Convert to data frame, then set gene symbols as row names
 results_plenti_vs_KO23 <- as.data.frame(results_plenti_vs_KO23)
 rownames(results_plenti_vs_KO23) <- results_plenti_vs_KO23$GeneSymbol
 
@@ -240,10 +239,10 @@ ranked_list_KO23 <- results_plenti_vs_KO23_clean %>%
   arrange(desc(ranking_metric)) %>%  # overall sort by ranking metric if needed
   select(GeneSymbol, ranking_metric)
 
-# Convert to a data frame (since tibbles don't support row names well)
+#Convert to a data frame (since tibbles don't support row names well)
 ranked_list_KO23 <- as.data.frame(ranked_list_KO23)
 
-# Set gene symbols as row names and remove the redundant column
+#Set gene symbols as row names and remove the redundant column
 rownames(ranked_list_KO23) <- ranked_list_KO23$GeneSymbol
 ranked_list_KO23 <- ranked_list_KO23 %>% dplyr::select(-GeneSymbol)
 
@@ -266,7 +265,7 @@ summary(DS1.svd)
 pScree <- fviz_eig(DS1.svd, addlabels = TRUE) + 
   theme_pubr(base_size = 9)
 
-# PCA Plot with colors
+##PCA Plot with colors----------------------------------------------------------
 pPCA <- fviz_pca_ind(DS1.svd, 
                      label = "all",  # Ensure all labels are visible
                      habillage = condition,  # Color by condition
@@ -276,7 +275,7 @@ pPCA <- fviz_pca_ind(DS1.svd,
        x = "PC1",
        y = "PC2")
 
-# Arrange plots
+#Arrange plots
 pScreePCA <- ggarrange(pScree, pPCA,
                        labels = c("A", "B"),
                        ncol = 2, nrow = 1)
@@ -285,17 +284,17 @@ print(pScreePCA)
 ggsave(file.path(plot_dir, "PCA_ScreePlot.png"), plot = pScreePCA, width = 20, height = 10)
 
 #VOLCANO PLOT===================================================================
-##Volcano plot of Plent vs KO22---------------------------
-###Ensure gene names are set as rownames
+##Volcano plot of Plent vs KO22-------------------------------------------------
+#Ensure gene names are set as rownames
 volcano_data_22 <- as.data.frame(results_plenti_vs_KO22)
 volcano_data_22$Gene <- rownames(volcano_data_22)
 
-###Define significance thresholds
+#Define significance thresholds
 volcano_data_22$Significance <- "Not Significant"
 volcano_data_22$Significance[volcano_data_22$padj < 0.05 & volcano_data_22$log2FoldChange > log2(2)] <- "Upregulated"
 volcano_data_22$Significance[volcano_data_22$padj < 0.05 & volcano_data_22$log2FoldChange < -log2(2)] <- "Downregulated"
 
-###Separate top 15 upregulated and downregulated genes
+#Separate top 15 upregulated and downregulated genes
 top_upregulated_22 <- volcano_data_22 %>%
   filter(Significance == "Upregulated") %>%
   arrange(padj) %>%
@@ -306,10 +305,10 @@ top_downregulated_22 <- volcano_data_22 %>%
   arrange(padj) %>%
   head(15)
 
-###Combine top 30 genes
+#Combine top 30 genes
 top_genes_22 <- rbind(top_upregulated_22, top_downregulated_22)
 
-###Create the volcano plot
+#Create the volcano plot
 Volcano_Plot_Plenti_v_KO22 <- ggplot(volcano_data_22, aes(x = log2FoldChange, y = -log10(padj), color = Significance, label = Gene)) +
   geom_point(alpha = 0.7) +
   scale_color_manual(values = c("Not Significant" = "grey", "Upregulated" = "red", "Downregulated" = "blue")) + 
@@ -322,17 +321,17 @@ Volcano_Plot_Plenti_v_KO22 <- ggplot(volcano_data_22, aes(x = log2FoldChange, y 
        x = "Log2 Fold Change", y = "-Log10 Adjusted P-value") +
   theme_minimal()
 ggsave(file.path(plot_dir, "Volcano_Plot_Plenti_vs_KO22.png"), plot = Volcano_Plot_Plenti_v_KO22, width = 10, height = 6)
-##Volcano plot of Plent vs KO23---------------------------
-###Ensure gene names are set as rownames
+##Volcano plot of Plent vs KO23-------------------------------------------------
+#Ensure gene names are set as rownames
 volcano_data_23 <- as.data.frame(results_plenti_vs_KO23)
 volcano_data_23$Gene <- rownames(volcano_data_23)
 
-###Define significance thresholds
+#Define significance thresholds
 volcano_data_23$Significance <- "Not Significant"
 volcano_data_23$Significance[volcano_data_23$padj < 0.05 & volcano_data_23$log2FoldChange > log2(2)] <- "Upregulated"
 volcano_data_23$Significance[volcano_data_23$padj < 0.05 & volcano_data_23$log2FoldChange < -log2(2)] <- "Downregulated"
 
-###Top 15 up/downregulated
+#Top 15 up/downregulated
 top_upregulated_23 <- volcano_data_23 %>%
   filter(Significance == "Upregulated") %>%
   arrange(padj) %>%
@@ -343,10 +342,10 @@ top_downregulated_23 <- volcano_data_23 %>%
   arrange(padj) %>%
   head(15)
 
-###Combine top 30 genes
+#Combine top 30 genes
 top_genes_23 <- rbind(top_upregulated_23, top_downregulated_23)
 
-###Volcano plot for KO23
+#Volcano plot for KO23
 Volcano_Plot_Plenti_v_KO23 <- ggplot(volcano_data_23, aes(x = log2FoldChange, y = -log10(padj), color = Significance, label = Gene)) +
   geom_point(alpha = 0.7) +
   scale_color_manual(values = c("Not Significant" = "grey", "Upregulated" = "red", "Downregulated" = "blue")) + 
@@ -360,18 +359,17 @@ Volcano_Plot_Plenti_v_KO23 <- ggplot(volcano_data_23, aes(x = log2FoldChange, y 
 ggsave(file.path(plot_dir,"Volcano_Plot_Plenti_vs_KO23.png"), plot = Volcano_Plot_Plenti_v_KO23, width = 10, height = 6)
 
 #GENE ONTOLOGY==================================================================
-# Load necessary libraries for GO analysis for KO22
+##Load necessary libraries for GO analysis--------------------------------------
 library(clusterProfiler)
 library(org.Hs.eg.db)
 library(enrichplot)
 library(DOSE)
 
-#Define the function to convert fractions to decimals
+##Define the function to convert fractions to decimals--------------------------
 fraction_to_decimal <- function(fraction_string) {
-  sapply(strsplit(fraction_string, "/"), function(x) as.numeric(x[1]) / as.numeric(x[2]))
-}
+  sapply(strsplit(fraction_string, "/"), function(x) as.numeric(x[1]) / as.numeric(x[2]))}
 
-#Perform GO enrichment analysis for upregulated genes in different ontologies in KO22
+##Perform GO enrichment analysis for upregulated genes in different ontologies in KO22----
 upregulated_genes_KO22 <- rownames(results_plenti_vs_KO22)[results_plenti_vs_KO22$padj < 0.05 & results_plenti_vs_KO22$log2FoldChange > log2(2)]
 
 enrich.go.up.bp_KO22 <- enrichGO(gene = upregulated_genes_KO22, OrgDb = org.Hs.eg.db, keyType = "SYMBOL", ont = "BP", pAdjustMethod = "BH", qvalueCutoff = 0.05, readable = TRUE)
@@ -464,7 +462,7 @@ ggsave(file.path(plot_dir,"GO_downregulated_dotplot_MF_KO22.png"), plot = down_G
 
 
 
-#Perform GO enrichment analysis for upregulated genes in different ontologies in KO23
+##Perform GO enrichment analysis for upregulated genes in different ontologies in KO23----
 upregulated_genes_KO23 <- rownames(results_plenti_vs_KO23)[results_plenti_vs_KO23$padj < 0.05 & results_plenti_vs_KO23$log2FoldChange > log2(2)]
 
 enrich.go.up.bp_KO23 <- enrichGO(gene = upregulated_genes_KO23, OrgDb = org.Hs.eg.db, keyType = "SYMBOL", ont = "BP", pAdjustMethod = "BH", qvalueCutoff = 0.05, readable = TRUE)
@@ -486,7 +484,7 @@ result.enrich.go.down.bp_KO23 <- enrich.go.down.bp_KO23@result
 result.enrich.go.down.cc_KO23 <- enrich.go.down.cc_KO23@result
 result.enrich.go.down.mf_KO23 <- enrich.go.down.mf_KO23@result
 
-# Convert GeneRatio from fraction to decimal for KO23
+#Convert GeneRatio from fraction to decimal for KO23
 result.enrich.go.up.bp_KO23$GeneRatio <- fraction_to_decimal(result.enrich.go.up.bp_KO23$GeneRatio)
 result.enrich.go.up.cc_KO23$GeneRatio <- fraction_to_decimal(result.enrich.go.up.cc_KO23$GeneRatio)
 result.enrich.go.up.mf_KO23$GeneRatio <- fraction_to_decimal(result.enrich.go.up.mf_KO23$GeneRatio)
@@ -495,7 +493,7 @@ result.enrich.go.down.bp_KO23$GeneRatio <- fraction_to_decimal(result.enrich.go.
 result.enrich.go.down.cc_KO23$GeneRatio <- fraction_to_decimal(result.enrich.go.down.cc_KO23$GeneRatio)
 result.enrich.go.down.mf_KO23$GeneRatio <- fraction_to_decimal(result.enrich.go.down.mf_KO23$GeneRatio)
 
-# Save GO enrichment results for KO23
+#Save GO enrichment results for KO23
 write.csv(result.enrich.go.up.bp_KO23, file.path(data_dir, "GO_enrichment_upregulated_BP_KO23.csv"), row.names = FALSE)
 write.csv(result.enrich.go.up.cc_KO23, file.path(data_dir,"GO_enrichment_upregulated_CC_KO23.csv"), row.names = FALSE)
 write.csv(result.enrich.go.up.mf_KO23, file.path(data_dir,"GO_enrichment_upregulated_MF_KO23.csv"), row.names = FALSE)
@@ -504,7 +502,7 @@ write.csv(result.enrich.go.down.bp_KO23, file.path(data_dir,"GO_enrichment_downr
 write.csv(result.enrich.go.down.cc_KO23, file.path(data_dir,"GO_enrichment_downregulated_CC_KO23.csv"), row.names = FALSE)
 write.csv(result.enrich.go.down.mf_KO23, file.path(data_dir,"GO_enrichment_downregulated_MF_KO23.csv"), row.names = FALSE)
 
-# Filter and visualize top GO terms for KO23
+#Filter and visualize top GO terms for KO23
 top_15_up_bp_KO23 <- head(result.enrich.go.up.bp_KO23, 15)
 top_15_up_cc_KO23 <- head(result.enrich.go.up.cc_KO23, 15)
 top_15_up_mf_KO23 <- head(result.enrich.go.up.mf_KO23, 15)
@@ -513,50 +511,50 @@ top_15_down_bp_KO23 <- head(result.enrich.go.down.bp_KO23, 15)
 top_15_down_cc_KO23 <- head(result.enrich.go.down.cc_KO23, 15)
 top_15_down_mf_KO23 <- head(result.enrich.go.down.mf_KO23, 15)
 
-# Dotplot for upregulated GO terms in BP for KO23
+#Dotplot for upregulated GO terms in BP for KO23
 up_GO_dotplot_bp_KO23 <- ggplot(top_15_up_bp_KO23, aes(x = GeneRatio, y = reorder(Description, GeneRatio), color = p.adjust, size = Count)) +
   geom_point() +
   labs(title = "Top 15 Upregulated GO Terms (BP) KO23", x = "Gene Ratio", y = "GO Term") +
   theme_minimal()
 ggsave(file.path(plot_dir,"GO_upregulated_dotplot_BP_KO23.png"), plot = up_GO_dotplot_bp_KO23, width = 10, height = 6)
 
-# Dotplot for upregulated GO terms in CC for KO23
+#Dotplot for upregulated GO terms in CC for KO23
 up_GO_dotplot_cc_KO23 <- ggplot(top_15_up_cc_KO23, aes(x = GeneRatio, y = reorder(Description, GeneRatio), color = p.adjust, size = Count)) +
   geom_point() +
   labs(title = "Top 15 Upregulated GO Terms (CC) KO23", x = "Gene Ratio", y = "GO Term") +
   theme_minimal()
 ggsave(file.path(plot_dir,"GO_upregulated_dotplot_CC_KO23.png"), plot = up_GO_dotplot_cc_KO23, width = 10, height = 6)
 
-# Dotplot for upregulated GO terms in MF for KO23
+#Dotplot for upregulated GO terms in MF for KO23
 up_GO_dotplot_mf_KO23 <- ggplot(top_15_up_mf_KO23, aes(x = GeneRatio, y = reorder(Description, GeneRatio), color = p.adjust, size = Count)) +
   geom_point() +
   labs(title = "Top 15 Upregulated GO Terms (MF) KO23", x = "Gene Ratio", y = "GO Term") +
   theme_minimal()
 ggsave(file.path(plot_dir,"GO_upregulated_dotplot_MF_KO23.png"), plot = up_GO_dotplot_mf_KO23, width = 10, height = 6)
 
-# Dotplot for downregulated GO terms in BP for KO23
+#Dotplot for downregulated GO terms in BP for KO23
 down_GO_dotplot_bp_KO23 <- ggplot(top_15_down_bp_KO23, aes(x = GeneRatio, y = reorder(Description, GeneRatio), color = p.adjust, size = Count)) +
   geom_point() +
   labs(title = "Top 15 Downregulated GO Terms (BP) KO23", x = "Gene Ratio", y = "GO Term") +
   theme_minimal()
 ggsave(file.path(plot_dir,"GO_downregulated_dotplot_BP_KO23.png"), plot = down_GO_dotplot_bp_KO23, width = 10, height = 6)
 
-# Dotplot for downregulated GO terms in CC for KO23
+#Dotplot for downregulated GO terms in CC for KO23
 down_GO_dotplot_cc_KO23 <- ggplot(top_15_down_cc_KO23, aes(x = GeneRatio, y = reorder(Description, GeneRatio), color = p.adjust, size = Count)) +
   geom_point() +
   labs(title = "Top 15 Downregulated GO Terms (CC) KO23", x = "Gene Ratio", y = "GO Term") +
   theme_minimal()
 ggsave(file.path(plot_dir,"GO_downregulated_dotplot_CC_KO23.png"), plot = down_GO_dotplot_cc_KO23, width = 10, height = 6)
 
-# Dotplot for downregulated GO terms in MF for KO23
+#Dotplot for downregulated GO terms in MF for KO23
 down_GO_dotplot_mf_KO23 <- ggplot(top_15_down_mf_KO23, aes(x = GeneRatio, y = reorder(Description, GeneRatio), color = p.adjust, size = Count)) +
   geom_point() +
   labs(title = "Top 15 Downregulated GO Terms (MF) KO23", x = "Gene Ratio", y = "GO Term") +
   theme_minimal()
 ggsave(file.path(plot_dir,"GO_downregulated_dotplot_MF_KO23.png"), plot = down_GO_dotplot_mf_KO23, width = 10, height = 6)
 
-#KEGG Enrichment Analysis (there are two versions of this, same result?)========
-# Function to Convert Gene Symbols to Entrez IDs
+#KEGG Enrichment Analysis=======================================================
+##Function to Convert Gene Symbols to Entrez IDs--------------------------------
 convert_to_entrez <- function(gene_list) {
   entrez_ids <- mapIds(org.Hs.eg.db, 
                        keys = gene_list, 
@@ -568,16 +566,15 @@ convert_to_entrez <- function(gene_list) {
   return(entrez_ids[!is.na(entrez_ids)])
 }
 
-# Function to Perform KEGG Enrichment
+##Function to Perform KEGG Enrichment-------------------------------------------
 perform_kegg_enrichment <- function(gene_list) {
   entrez_ids <- convert_to_entrez(gene_list)  # Reuse the convert_to_entrez() function
   enrichKEGG(gene = entrez_ids,
              organism = "hsa",  # Human KEGG pathways
              pvalueCutoff = 0.05,
-             keyType = "kegg")
-}
+             keyType = "kegg")}
 
-# Function to Plot KEGG Results with ggplot2
+##Function to Plot KEGG Results with ggplot2------------------------------------
 plot_kegg_ggplot <- function(kegg_res, title, filename, top_n = 20) {
   if (!is.null(kegg_res) && nrow(as.data.frame(kegg_res@result)) > 0) {
     kegg_df <- as.data.frame(kegg_res@result)
@@ -600,35 +597,36 @@ plot_kegg_ggplot <- function(kegg_res, title, filename, top_n = 20) {
   }
 }
 
-# Convert Gene Symbols to Entrez IDs
+##Creating .csv and plots-------------------------------------------------------
+#Convert Gene Symbols to Entrez IDs
 up_entrez_KO22 <- convert_to_entrez(upregulated_genes_KO22)
 down_entrez_KO22 <- convert_to_entrez(downregulated_genes_KO22)
 
-# Perform KEGG Enrichment for Upregulated and Downregulated Genes
+#Perform KEGG Enrichment for Upregulated and Downregulated Genes
 kegg_up_KO22 <- enrichKEGG(gene = up_entrez_KO22, organism = "hsa", pvalueCutoff = 0.05)
 kegg_down_KO22 <- enrichKEGG(gene = down_entrez_KO22, organism = "hsa", pvalueCutoff = 0.05)
 
-# Plot and Save KEGG Results
+#Plot and Save KEGG Results
 plot_kegg_ggplot(kegg_up_KO22, "KEGG Pathway for KO22 - Upregulated Genes", "KEGG_Upregulated_KO22.png")
 plot_kegg_ggplot(kegg_down_KO22, "KEGG Pathway for KO22 - Downregulated Genes", "KEGG_Downregulated_KO22.png")
 
-# Save Results
+#Save Results
 write.csv(as.data.frame(kegg_up_KO22@result), file.path(data_dir, "KEGG_Upregulated_KO22.csv"))
 write.csv(as.data.frame(kegg_down_KO22@result), file.path(data_dir, "KEGG_Downregulated_KO22.csv"))
 
-# Convert Gene Symbols to Entrez IDs
+#Convert Gene Symbols to Entrez IDs
 up_entrez_KO23 <- convert_to_entrez(upregulated_genes_KO23)
 down_entrez_KO23 <- convert_to_entrez(downregulated_genes_KO23)
 
-# Perform KEGG Enrichment for Upregulated and Downregulated Genes
+#Perform KEGG Enrichment for Upregulated and Downregulated Genes
 kegg_up_KO23 <- enrichKEGG(gene = up_entrez_KO23, organism = "hsa", pvalueCutoff = 0.05)
 kegg_down_KO23 <- enrichKEGG(gene = down_entrez_KO23, organism = "hsa", pvalueCutoff = 0.05)
 
-# Plot and Save KEGG Results
+#Plot and Save KEGG Results
 plot_kegg_ggplot(kegg_up_KO23, "KEGG Pathway for KO23 - Upregulated Genes", "KEGG_Upregulated_KO23.png")
 plot_kegg_ggplot(kegg_down_KO23, "KEGG Pathway for KO23 - Downregulated Genes", "KEGG_Downregulated_KO23.png")
 
-# Save Results
+#Save Results
 write.csv(as.data.frame(kegg_up_KO23@result), file.path(data_dir,"KEGG_Upregulated_KO23.csv"))
 write.csv(as.data.frame(kegg_down_KO23@result), file.path(data_dir,"KEGG_Downregulated_KO23.csv"))
 
