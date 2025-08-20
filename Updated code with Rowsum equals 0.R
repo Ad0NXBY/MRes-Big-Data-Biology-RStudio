@@ -24,8 +24,8 @@ BiocManager::install("ComplexHeatmap")
 
 
 ##Create output directories-----------------------------------------------------
-plot_dir <- "Analysis plots with combined code"
-data_dir <- "List_for_analysis with combined code"
+plot_dir <- "Analysis plots with combined code using Rowsum"
+data_dir <- "List_for_analysis with combined code using Rowsum"
 
 dir.create(plot_dir, showWarnings = FALSE)
 dir.create(data_dir, showWarnings = FALSE)
@@ -34,7 +34,8 @@ dir.create(data_dir, showWarnings = FALSE)
 library(data.table)  # For fread()
 library(dplyr)       # For data manipulation (select, left_join, distinct, etc.)
 library(biomaRt)     # For mapping Ensembl IDs to gene symbols
-
+library(edgeR)
+library(DESeq2)
 ##Read files into R-------------------------------------------------------------
 Control1 <- fread("C:/Users/Brandon/Documents/MRes Big Data Biology/Data analysis/ChenY_RNA_seq/Feature counts/Ch_A1_featurecounts.txt")
 Control2 <- fread("C:/Users/Brandon/Documents/MRes Big Data Biology/Data analysis/ChenY_RNA_seq/Feature counts/Ch_A2_featurecounts.txt")
@@ -109,7 +110,7 @@ combined_data <- combined_data %>%
 
 # Set row names and remove unnecessary columns
 rownames(combined_data) <- combined_data$FinalName
-combined_data <- combined_data %>% select(-GeneID, -GeneSymbol, -FinalName)
+combined_data <- combined_data %>% dplyr::select(-GeneID, -GeneSymbol, -FinalName)
 
 
 
@@ -278,25 +279,36 @@ DS1.svd <- assay(vsd) |>
 summary(DS1.svd)
 
 pScree <- fviz_eig(DS1.svd, addlabels = TRUE) + 
-  theme_pubr(base_size = 9)
+  theme_pubr(base_size = 20)
 
 ##PCA Plot with colors----------------------------------------------------------
 pPCA <- fviz_pca_ind(DS1.svd, 
                      label = "all",  # Ensure all labels are visible
                      habillage = condition,  # Color by condition
                      repel = TRUE, # Prevent label overlap
-                     mean.point = FALSE) +  #remove centroid marker
+                     mean.point = FALSE,  #remove centroid marker
+                     pointsize = 4, 
+                     geom.ind = "point",
+                     labelsize = 6
+                     )+  
   labs(title = "PCA Plot",
        x = "PC1",
-       y = "PC2")
+       y = "PC2") + 
+  theme(
+    plot.title = element_text(size = 20),  # Title size
+    axis.title = element_text(size = 18),                 # Axis titles
+    axis.text = element_text(size = 14),                  # Axis tick labels
+    legend.title = element_text(size = 16),               # Legend title
+    legend.text = element_text(size = 14)                 # Legend text
+  )
 
 #Arrange plots
 pScreePCA <- ggarrange(pScree, pPCA,
                        labels = c("A", "B"),
-                       ncol = 2, nrow = 1)
+                       ncol = 1, nrow = 2)
 
 print(pScreePCA)
-ggsave(file.path(plot_dir, "PCA_ScreePlot.png"), plot = pScreePCA, width = 20, height = 10)
+ggsave(file.path(plot_dir, "PCA_ScreePlot.png"), plot = pScreePCA, width = 12, height = 20)
 
 
 
@@ -373,6 +385,21 @@ volcano_data_22$Significance <- "Not Significant"
 volcano_data_22$Significance[volcano_data_22$padj < 0.05 & volcano_data_22$log2FoldChange > log2(2)] <- "Upregulated"
 volcano_data_22$Significance[volcano_data_22$padj < 0.05 & volcano_data_22$log2FoldChange < -log2(2)] <- "Downregulated"
 
+#Separate top 25 upregulated and downregulated genes
+top_upregulated_22 <- volcano_data_22 %>%
+  filter(Significance == "Upregulated") %>%
+  arrange(padj) %>%
+  head(25)
+
+top_downregulated_22 <- volcano_data_22 %>%
+  filter(Significance == "Downregulated") %>%
+  arrange(padj) %>%
+  head(25)
+
+#Combine top 30 genes
+top_genes_22 <- rbind(top_upregulated_22, top_downregulated_22)
+
+
 #Create volcano plot with geom_text_repel
 Volcano_Plot_Plenti_v_KO22 <- ggplot(volcano_data_22, aes(x = log2FoldChange, y = -log10(padj), color = Significance)) +
   geom_point(alpha = 0.7) +
@@ -392,7 +419,13 @@ Volcano_Plot_Plenti_v_KO22 <- ggplot(volcano_data_22, aes(x = log2FoldChange, y 
   labs(title = "Volcano Plot (Plenti vs KO22)",
        x = "Log2 Fold Change",
        y = "-Log10 Adjusted P-value") +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 20),  # bigger title
+    axis.title = element_text(size = 16),  # bigger x and y axis labels
+    axis.text = element_text(size = 14)    # bigger tick labels
+  )
+
 
 #Save plot
 ggsave(file.path(plot_dir, "Volcano_Plot_Plenti_vs_KO22.jpg"), plot = Volcano_Plot_Plenti_v_KO22,
@@ -409,6 +442,21 @@ volcano_data_23 <- na.omit(volcano_data_23)
 volcano_data_23$Significance <- "Not Significant"
 volcano_data_23$Significance[volcano_data_23$padj < 0.05 & volcano_data_23$log2FoldChange > log2(2)] <- "Upregulated"
 volcano_data_23$Significance[volcano_data_23$padj < 0.05 & volcano_data_23$log2FoldChange < -log2(2)] <- "Downregulated"
+
+#Separate top 25 upregulated and downregulated genes
+top_upregulated_23 <- volcano_data_23 %>%
+  filter(Significance == "Upregulated") %>%
+  arrange(padj) %>%
+  head(25)
+
+top_downregulated_23 <- volcano_data_23 %>%
+  filter(Significance == "Downregulated") %>%
+  arrange(padj) %>%
+  head(25)
+
+#Combine top 30 genes
+top_genes_23 <- rbind(top_upregulated_23, top_downregulated_23)
+
 
 #Create volcano plot with geom_text_repel
 Volcano_Plot_Plenti_v_KO23 <- ggplot(volcano_data_23, aes(x = log2FoldChange, y = -log10(padj), color = Significance)) +
@@ -429,11 +477,31 @@ Volcano_Plot_Plenti_v_KO23 <- ggplot(volcano_data_23, aes(x = log2FoldChange, y 
   labs(title = "Volcano Plot (Plenti vs KO23)",
        x = "Log2 Fold Change",
        y = "-Log10 Adjusted P-value") +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 20),  # bigger title
+    axis.title = element_text(size = 16),  # bigger x and y axis labels
+    axis.text = element_text(size = 14)    # bigger tick labels
+  )
+
 
 #Save plot
 ggsave(file.path(plot_dir, "Volcano_Plot_Plenti_vs_KO23.jpg"), plot = Volcano_Plot_Plenti_v_KO23,
        width = 10, height = 6, dpi = 800)
+
+# Combine KO22 and KO23 volcano plots vertically
+Volcano_Combined <- ggarrange(
+  Volcano_Plot_Plenti_v_KO22, 
+  Volcano_Plot_Plenti_v_KO23,
+  labels = c("A", "B"),        # Panel labels
+  ncol = 1, nrow = 2,          # Vertical layout (A above B)
+  common.legend = TRUE,        # One shared legend
+  legend = "right"             # Shared legend on the right
+)
+
+# Save combined figure
+ggsave(file.path(plot_dir, "Volcano_Plots_Combined.jpg"), plot = Volcano_Combined,
+       width = 10, height = 12, dpi = 800)
 
 #GENE ONTOLOGY=================================================================
 ##Load necessary libraries------------------------------------------------------
@@ -577,6 +645,20 @@ Gene_ontology_KO22_DOWN <- ggplot(sorted_ego_down_df_KO22, aes(x = Count, y = De
 
 ggsave(file.path(plot_dir, "GO Terms Down-regulated Genes KO22.jpg"), plot = Gene_ontology_KO22_DOWN, width = 12, height = 8, dpi = 800)
 
+# Combine Upregulated (A) and Downregulated (B) GO plots vertically
+GO_Combined_KO22 <- ggarrange(
+  Gene_ontology_KO22_UP, 
+  Gene_ontology_KO22_DOWN,
+  labels = c("A", "B"),   # Figure A = Upregulated, Figure B = Downregulated
+  ncol = 1, nrow = 2,     # Vertical layout
+  common.legend = TRUE,   # Shared legend
+  legend = "right"        # Legend on the right
+)
+
+# Save combined figure
+ggsave(file.path(plot_dir, "GO_Terms_KO22_Combined.jpg"), plot = GO_Combined_KO22,
+       width = 12, height = 14, dpi = 800)
+
 
 ##FIH23KO------------------------------------------------------------------------
 up_genes_FIH23KO <- rownames(results_plenti_vs_KO23[!is.na(results_plenti_vs_KO23$padj) & results_plenti_vs_KO23$padj < 0.05 & results_plenti_vs_KO23$log2FoldChange > 0, ])
@@ -708,7 +790,19 @@ Gene_ontology_KO23_DOWN <- ggplot(sorted_ego_down_df_KO23, aes(x = Count, y = De
 
 ggsave(file.path(plot_dir, "GO Terms Down-regulated Genes KO23.jpg"), plot = Gene_ontology_KO23_DOWN, width = 12, height = 8, dpi = 800)
 
+# Combine Upregulated (A) and Downregulated (B) GO plots vertically
+GO_Combined_KO23 <- ggarrange(
+  Gene_ontology_KO23_UP, 
+  Gene_ontology_KO23_DOWN,
+  labels = c("A", "B"),   # Figure A = Upregulated, Figure B = Downregulated
+  ncol = 1, nrow = 2,     # Vertical layout
+  common.legend = TRUE,   # Shared legend
+  legend = "right"        # Legend on the right
+)
 
+# Save combined figure
+ggsave(file.path(plot_dir, "GO_Terms_KO23_Combined.jpg"), plot = GO_Combined_KO23,
+       width = 12, height = 14, dpi = 800)
 #KEGG Enrichment Analysis=======================================================
 ##Load necessary libraries------------------------------------------------------
 library(clusterProfiler)
@@ -730,37 +824,74 @@ convert_to_entrez <- function(gene_list) {
 }
 
 ##Function to Perform KEGG Enrichment-------------------------------------------
-perform_kegg_enrichment <- function(gene_list) {
-  entrez_ids <- convert_to_entrez(gene_list)  # Reuse the convert_to_entrez() function
-  enrichKEGG(gene = entrez_ids,
-             organism = "hsa",  # Human KEGG pathways
-             pvalueCutoff = 0.05,
-             keyType = "kegg")}
-
-##Function to Plot KEGG Results with ggplot2------------------------------------
 plot_kegg_ggplot <- function(kegg_res, title, filename, top_n = 20) {
   if (!is.null(kegg_res) && nrow(as.data.frame(kegg_res@result)) > 0) {
     kegg_df <- as.data.frame(kegg_res@result)
     kegg_df <- head(kegg_df[order(kegg_df$p.adjust), ], top_n)
     
-    # Calculate GeneRatio as a numeric value
+    # Calculate GeneRatio as numeric
     kegg_df$GeneRatio <- sapply(kegg_df$GeneRatio, function(x) eval(parse(text = x)))
     
     p <- ggplot(kegg_df, aes(x = GeneRatio, y = reorder(Description, GeneRatio), color = p.adjust, size = Count)) +
       geom_point() +
       scale_color_gradient(low = "red", high = "blue") +
-      labs(title = title, x = "Gene Ratio", y = "KEGG Pathway", color = "Adjusted p-value", size = "Gene Count") +
+      labs(title = title, x = "Gene Ratio", y = "KEGG Pathway", 
+           color = "Adjusted p-value", size = "Gene Count") +
       theme_minimal() +
-      theme(text = element_text(size = 12))
+      theme(
+        plot.title = element_text(size = 20),
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 16),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)
+      )
     
     # Save plot
-    ggsave(file.path(plot_dir, filename), plot = p, width = 10, height = 6)
+    ggsave(file.path(plot_dir, filename), plot = p, width = 10, height = 6, dpi = 800)
+    
+    return(p)  # return ggplot object so we can combine later
   } else {
     print(paste("No significant KEGG pathways found for", title))
+    return(NULL)
   }
 }
 
-##Creating .csv and plots-------------------------------------------------------
+## Create KEGG plots for KO22
+KEGG_Up_Plot_KO22   <- plot_kegg_ggplot(kegg_up_KO22, "KEGG Pathway for KO22 - Upregulated Genes", "KEGG_Upregulated_KO22.png")
+KEGG_Down_Plot_KO22 <- plot_kegg_ggplot(kegg_down_KO22, "KEGG Pathway for KO22 - Downregulated Genes", "KEGG_Downregulated_KO22.png")
+
+# Combine KO22 Up & Down vertically
+KEGG_Combined_KO22 <- ggarrange(
+  KEGG_Up_Plot_KO22, 
+  KEGG_Down_Plot_KO22,
+  labels = c("A", "B"),
+  ncol = 1, nrow = 2,
+  common.legend = TRUE,
+  legend = "right"
+)
+
+ggsave(file.path(plot_dir, "KEGG_KO22_Combined.jpg"), plot = KEGG_Combined_KO22,
+       width = 16, height = 20, dpi = 800)
+
+
+## Create KEGG plots for KO23
+KEGG_Up_Plot_KO23   <- plot_kegg_ggplot(kegg_up_KO23, "KEGG Pathway for KO23 - Upregulated Genes", "KEGG_Upregulated_KO23.png")
+KEGG_Down_Plot_KO23 <- plot_kegg_ggplot(kegg_down_KO23, "KEGG Pathway for KO23 - Downregulated Genes", "KEGG_Downregulated_KO23.png")
+
+# Combine KO23 Up & Down vertically
+KEGG_Combined_KO23 <- ggarrange(
+  KEGG_Up_Plot_KO23, 
+  KEGG_Down_Plot_KO23,
+  labels = c("A", "B"),
+  ncol = 1, nrow = 2,
+  common.legend = TRUE,
+  legend = "right"
+)
+
+ggsave(file.path(plot_dir, "KEGG_KO23_Combined.jpg"), plot = KEGG_Combined_KO23,
+       width = 16, height = 20, dpi = 800)
+
+##Creating .csv-----------------------------------------------------------------
 #Convert Gene Symbols to Entrez IDs
 up_entrez_KO22 <- convert_to_entrez(up_genes_FIH22KO)
 down_entrez_KO22 <- convert_to_entrez(down_genes_FIH22KO)
@@ -769,145 +900,142 @@ down_entrez_KO22 <- convert_to_entrez(down_genes_FIH22KO)
 kegg_up_KO22 <- enrichKEGG(gene = up_entrez_KO22, organism = "hsa", pvalueCutoff = 0.05)
 kegg_down_KO22 <- enrichKEGG(gene = down_entrez_KO22, organism = "hsa", pvalueCutoff = 0.05)
 
-#Plot and Save KEGG Results
-plot_kegg_ggplot(kegg_up_KO22, "KEGG Pathway for KO22 - Upregulated Genes", "KEGG_Upregulated_KO22.png")
-plot_kegg_ggplot(kegg_down_KO22, "KEGG Pathway for KO22 - Downregulated Genes", "KEGG_Downregulated_KO22.png")
-
 #Save Results
 write.csv(as.data.frame(kegg_up_KO22@result), file.path(data_dir, "KEGG_Upregulated_KO22.csv"))
 write.csv(as.data.frame(kegg_down_KO22@result), file.path(data_dir, "KEGG_Downregulated_KO22.csv"))
 
 #Convert Gene Symbols to Entrez IDs
-up_entrez_KO23 <- convert_to_entrez(up_genes_FIH23KO)
-down_entrez_KO23 <- convert_to_entrez(down_genes_FIH23KO)
+up_entrez_KO23 <- convert_to_entrez(up_genes_FIH22KO)
+down_entrez_KO23 <- convert_to_entrez(down_genes_FIH22KO)
 
 #Perform KEGG Enrichment for Upregulated and Downregulated Genes
 kegg_up_KO23 <- enrichKEGG(gene = up_entrez_KO23, organism = "hsa", pvalueCutoff = 0.05)
 kegg_down_KO23 <- enrichKEGG(gene = down_entrez_KO23, organism = "hsa", pvalueCutoff = 0.05)
 
-#Plot and Save KEGG Results
-plot_kegg_ggplot(kegg_up_KO23, "KEGG Pathway for KO23 - Upregulated Genes", "KEGG_Upregulated_KO23.png")
-plot_kegg_ggplot(kegg_down_KO23, "KEGG Pathway for KO23 - Downregulated Genes", "KEGG_Downregulated_KO23.png")
-
 #Save Results
-write.csv(as.data.frame(kegg_up_KO23@result), file.path(data_dir,"KEGG_Upregulated_KO23.csv"))
-write.csv(as.data.frame(kegg_down_KO23@result), file.path(data_dir,"KEGG_Downregulated_KO23.csv"))
+write.csv(as.data.frame(kegg_up_KO23@result), file.path(data_dir, "KEGG_Upregulated_KO23.csv"))
+write.csv(as.data.frame(kegg_down_KO23@result), file.path(data_dir, "KEGG_Downregulated_KO23.csv"))
 
-
-#GSVA===========================================================================
-##Load necessary libraries------------------------------------------------------
+## GSVA ========================================================================
+## Load necessary libraries ----------------------------------------------------
 library(GSVA)
 library(msigdbr)
 library(GSEABase)
 library(ComplexHeatmap)
+library(ggplot2)
+library(grid)   # Needed for gpar()
+library(gridExtra)  # Optional, in case needed for future multi-panel plots
 
-##Get human gene sets from msigdbr----------------------------------------------
+## Get human Hallmark gene sets -----------------------------------------------
 msigdbr_species <- msigdbr(species = "Homo sapiens")
 hallmark_genesets_df <- msigdbr_species[msigdbr_species$gs_cat == "H", ]
 
-
-##Split gene sets---------------------------------------------------------------
+## Create GeneSetCollection ----------------------------------------------------
 gset.idx.list <- split(hallmark_genesets_df$gene_symbol, hallmark_genesets_df$gs_name)
 
-##Create GeneSet objects with unique genes per set------------------------------
 geneSets <- lapply(names(gset.idx.list), function(name) {
   GeneSet(geneIds = unique(gset.idx.list[[name]]), 
           setName = name, 
           geneIdType = SymbolIdentifier())
 })
-
 geneSetCollection <- GeneSetCollection(geneSets)
 
-expr_matrix <- assay(vsd)  
+expr_matrix <- assay(vsd)
 
-
-##Create parameter object and run GSVA------------------------------------------
+## Run GSVA --------------------------------------------------------------------
 param <- gsvaParam(expr = expr_matrix, 
                    geneSets = geneSetCollection, 
                    kcdf = "Poisson")
 gsva_results <- gsva(param)
 
-
-head(gsva_results)
-
 write.csv(gsva_results, file.path(data_dir, "GSVA_results.csv"), row.names = TRUE)
 
-
-
-##Calculate t-test statistics and p-values for Control vs KO22------------------
-ttest_results <- t(apply(gsva_results, 1, function(row) {
-  test <- t.test(row[c("Control1_Count", "Control2_Count", "Control3_Count")], 
-                 row[c("FIH22KO1_Count", "FIH22KO2_Count", "FIH22KO3_Count")])
+## T-tests: Control vs KO22 ---------------------------------------------------
+ttest_results_KO22 <- t(apply(gsva_results, 1, function(row) {
+  test <- t.test(row[c("FIH22KO1_Count", "FIH22KO2_Count", "FIH22KO3_Count")],
+                 row[c("Control1_Count", "Control2_Count", "Control3_Count")])
   c(t_value = test$statistic, p_value = test$p.value)
 }))
+ttest_results_KO22 <- as.data.frame(ttest_results_KO22)
+colnames(ttest_results_KO22) <- c("t_value", "p_value")
 
-##Clean up gene set names and create data frame--------------------------------
+## T-tests: Control vs KO23 ---------------------------------------------------
+ttest_results_KO23 <- t(apply(gsva_results, 1, function(row) {
+  test <- t.test(row[c("FIH23KO1_Count", "FIH23KO2_Count", "FIH23KO3_Count")],
+                 row[c("Control1_Count", "Control2_Count", "Control3_Count")])
+  c(t_value = test$statistic, p_value = test$p.value)
+}))
+ttest_results_KO23 <- as.data.frame(ttest_results_KO23)
+colnames(ttest_results_KO23) <- c("t_value", "p_value")
+
+
+## Bar plot: KO22 --------------------------------------------------------------
 bar_data_KO22 <- data.frame(
-  GeneSet = sub("HALLMARK_", "", rownames(ttest_results)),
-  T_Value = ttest_results[, "t_value"],
-  P_Value = ttest_results[, "p_value"],
-  FillColor = ifelse(ttest_results[, "p_value"] < 0.05,
-                     ifelse(ttest_results[, "t_value"] > 0, "red", "blue"),
+  GeneSet = sub("HALLMARK_", "", rownames(ttest_results_KO22)),
+  T_Value = ttest_results_KO22$t_value,
+  P_Value = ttest_results_KO22$p_value,
+  
+  FillColor = ifelse(ttest_results_KO22$p_value < 0.05,
+                     ifelse(ttest_results_KO22$t_value > 0, "red", "blue"),
                      "grey")
 )
+bar_data_KO22 <- bar_data_KO22[order(bar_data_KO22$T_Value, decreasing = TRUE), ]
 
-#Sort by t-value for better visual
-bar_data_KO22 <- bar_data_KO22[order(bar_data_KO22$T_Value, decreasing = TRUE),]
-
-##Plot bar graph with p-value-based coloring------------------------------------
 GSVA_BarPlot_KO22 <- ggplot(bar_data_KO22, aes(x = reorder(GeneSet, T_Value), y = T_Value, fill = FillColor)) +
   geom_bar(stat = "identity") +
   scale_fill_identity() +
   coord_flip() +
-  labs(x = "Gene Set", y = "t value of GSVA", title = "GSVA Analysis for Control vs KO22") +
-  theme_minimal() +
-  theme(text = element_text(color = "black"),
-        legend.position = "none")
+  labs(x = "Gene Set", y = "t value of GSVA", title = "GSVA: FIH KO22 vs Control") +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "none")
 
-#Save the plot to file
-ggsave(file.path(plot_dir, "GSVA_BarPlot_Plenti_vs_KO22.png"), plot = GSVA_BarPlot_KO22, width = 10, height = 6, dpi = 800)
+ggsave(file.path(plot_dir, "GSVA_BarPlot_Plenti_vs_KO22.png"),
+       plot = GSVA_BarPlot_KO22, width = 10, height = 6, dpi = 800)
 
-
-
-##Calculate t-test statistics and p-values for Control vs KO23------------------
-ttest_results_KO23 <- t(apply(gsva_results, 1, function(row) {
-  test <- t.test(row[c("Control1_Count", "Control2_Count", "Control3_Count")], 
-                 row[c("FIH23KO1_Count", "FIH23KO2_Count", "FIH23KO3_Count")])
-  c(t_value = test$statistic, p_value = test$p.value)
-}))
-
-##Clean up gene set names and create data frame for KO23------------------------
+## Bar plot: KO23 --------------------------------------------------------------
 bar_data_KO23 <- data.frame(
   GeneSet = sub("HALLMARK_", "", rownames(ttest_results_KO23)),
-  T_Value = ttest_results_KO23[, "t_value"],
-  P_Value = ttest_results_KO23[, "p_value"],
-  FillColor = ifelse(ttest_results_KO23[, "p_value"] < 0.05,
-                     ifelse(ttest_results_KO23[, "t_value"] > 0, "red", "blue"),
+  T_Value = ttest_results_KO23$t_value,
+  P_Value = ttest_results_KO23$p_value,
+  FillColor = ifelse(ttest_results_KO23$p_value < 0.05,
+                     ifelse(ttest_results_KO23$t_value > 0, "red", "blue"),
                      "grey")
 )
+bar_data_KO23 <- bar_data_KO23[order(bar_data_KO23$T_Value, decreasing = TRUE), ]
 
-#Sort by t-value for better visual in KO23
-bar_data_KO23 <- bar_data_KO23[order(bar_data_KO23$T_Value, decreasing = TRUE),]
-
-##Plot bar graph for KO23 with p-value-based coloring---------------------------
 GSVA_BarPlot_KO23 <- ggplot(bar_data_KO23, aes(x = reorder(GeneSet, T_Value), y = T_Value, fill = FillColor)) +
   geom_bar(stat = "identity") +
   scale_fill_identity() +
   coord_flip() +
-  labs(x = "Gene Set", y = "t value of GSVA", title = "GSVA Analysis for Control vs KO23") +
-  theme_minimal() +
-  theme(text = element_text(color = "black"),
-        legend.position = "none")
+  labs(x = "Gene Set", y = "t value of GSVA", title = "GSVA: FIH KO23 vs Control") +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "none")
 
-#Save the plot to file for KO23
-ggsave(file.path(plot_dir, "GSVA_BarPlot_Plenti_vs_KO23.png"), plot = GSVA_BarPlot_KO23, width = 10, height = 6, dpi = 800)
+ggsave(file.path(plot_dir, "GSVA_BarPlot_Plenti_vs_KO23.png"),
+       plot = GSVA_BarPlot_KO23, width = 10, height = 6, dpi = 800)
 
 
+# Combine KO22 and KO23 GSVA bar plots vertically
+GSVA_Combined <- ggarrange(
+  GSVA_BarPlot_KO22,
+  GSVA_BarPlot_KO23,
+  labels = c("A", "B"),
+  ncol = 1, nrow = 2,
+  common.legend = TRUE,
+  legend = "right"
+)
+
+# Save combined GSVA figure
+ggsave(
+  file.path(plot_dir, "GSVA_BarPlots_KO22_KO23_Combined.jpg"),
+  plot = GSVA_Combined,
+  width = 14, height = 20, dpi = 800
+)
 
 ##Calculate t-test statistics and p-values for KO22 vs KO23---------------------
 #ttest_results_KO22_vs_KO23 <- t(apply(gsva_results, 1, function(row) {
   #test <- t.test(row[c("FIH22KO1_Count", "FIH22KO2_Count", "FIH22KO3_Count")], 
-                 row[c("FIH23KO1_Count", "FIH23KO2_Count", "FIH23KO3_Count")])
+                 #row[c("FIH23KO1_Count", "FIH23KO2_Count", "FIH23KO3_Count")])
  # c(t_value = test$statistic, p_value = test$p.value)
 #}))
 
@@ -919,7 +1047,7 @@ ggsave(file.path(plot_dir, "GSVA_BarPlot_Plenti_vs_KO23.png"), plot = GSVA_BarPl
   #FillColor = ifelse(ttest_results_KO22_vs_KO23[, "p_value"] < 0.05,
                     # ifelse(ttest_results_KO22_vs_KO23[, "t_value.t"] > 0, "red", "blue"),
                      #"grey")
-)
+
 
 
 #Sort by t-value for better visual in KO22 vs KO23
@@ -945,13 +1073,10 @@ gsva_subset <- gsva_results[, c("Control1_Count", "Control2_Count", "Control3_Co
                                 "FIH22KO1_Count", "FIH22KO2_Count", "FIH22KO3_Count",
                                 "FIH23KO1_Count", "FIH23KO2_Count", "FIH23KO3_Count")]
 
-#Optionally, remove HALLMARK_ prefix
 rownames(gsva_subset) <- sub("HALLMARK_", "", rownames(gsva_subset))
+gsva_scaled <- t(scale(t(gsva_subset)))  # mean-center
 
-#Optionally scale rows (mean-center each gene set)
-gsva_scaled <- t(scale(t(gsva_subset)))
-
-##Create annotation for columns-------------------------------------------------
+## Annotation: column (conditions) ---------------------------------------------
 annotation_col <- data.frame(
   Condition = c(rep("Control", 3), rep("KO22", 3), rep("KO23", 3))
 )
@@ -962,20 +1087,50 @@ ha <- HeatmapAnnotation(
   col = list(Condition = c("Control" = "#4DBBD5", "KO22" = "#E64B35", "KO23" = "#00A087"))
 )
 
-##Create the heatmap using ComplexHeatmap---------------------------------------
-GSVA_heatmap <- Heatmap(gsva_scaled,  # GSVA results matrix
-                        name = "GSVA Score",  # Colorbar label
-                        top_annotation = ha,  # Annotations for columns (conditions)
-                        cluster_rows = TRUE,  # Cluster rows (gene sets)
-                        cluster_columns = FALSE,  # Don't cluster columns to preserve order (optional)
-                        show_row_names = TRUE,  # Show row (gene set) names
-                        show_column_names = TRUE,  # Show column (sample) names
-                        col = colorRampPalette(c("navy", "white", "firebrick3"))(100),  # Custom color palette
-                        heatmap_legend_param = list(title = "GSVA Score"),  # Color bar title
-                        row_names_gp = gpar(fontsize = 7)# Adjust row name font size
+## Annotation: row (significance status) ---------------------------------------
+sig_table <- data.frame(
+  KO22 = factor(
+    ifelse(ttest_results_KO22$p_value < 0.05,
+           ifelse(ttest_results_KO22$t_value > 0, "Up", "Down"), "NS"),
+    levels = c("Up", "Down", "NS")
+  ),
+  KO23 = factor(
+    ifelse(ttest_results_KO23$p_value < 0.05,
+           ifelse(ttest_results_KO23$t_value > 0, "Up", "Down"), "NS"),
+    levels = c("Up", "Down", "NS")
+  ),
+  row.names = sub("HALLMARK_", "", rownames(ttest_results_KO22))
+)
+sig_table <- sig_table[rownames(gsva_scaled), ]
+
+sig_cols <- list(
+  KO22 = c(Up = "firebrick3", Down = "royalblue", NS = "grey90"),
+  KO23 = c(Up = "firebrick3", Down = "royalblue", NS = "grey90")
 )
 
-jpeg(file.path(plot_dir,"GSVA_heatmap.jpg"), width = 1200, height = 1000, res = 150)
-draw(GSVA_heatmap)
-dev.off()
+row_sig_ha <- rowAnnotation(
+  df = sig_table,
+  col = sig_cols,
+  show_annotation_name = TRUE,
+  annotation_name_side = "top"
+)
 
+## Heatmap: Create & Save ------------------------------------------------------
+GSVA_heatmap <- Heatmap(
+  gsva_scaled,
+  name               = "GSVA\nscore",
+  top_annotation     = ha,
+  left_annotation    = row_sig_ha,
+  cluster_rows       = TRUE,
+  cluster_columns    = FALSE,
+  show_row_names     = TRUE,
+  show_column_names  = TRUE,
+  row_names_gp       = gpar(fontsize = 6),
+  column_names_gp    = gpar(fontsize = 10, fontface = "bold"),
+  col                = colorRampPalette(c("navy", "white", "firebrick3"))(100),
+  heatmap_legend_param = list(title = "GSVA score")
+)
+
+jpeg(file.path(plot_dir,"GSVA_heatmap_with_sig.jpg"), width = 1200, height = 1000, res = 150)
+draw(GSVA_heatmap, heatmap_legend_side = "right", annotation_legend_side = "right")
+dev.off()

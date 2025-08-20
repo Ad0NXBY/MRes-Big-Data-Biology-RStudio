@@ -47,8 +47,8 @@ library(DOSE)
 library(ReactomePA)    
 
 ##Create output directories-----------------------------------------------------
-plot_dir <- "Analysis plots with combined code"
-data_dir <- "List_for_analysis with combined code"
+plot_dir <- "Analysis plots with combined code with apply"
+data_dir <- "List_for_analysis with combined code with apply"
 
 dir.create(plot_dir, showWarnings = FALSE)
 dir.create(data_dir, showWarnings = FALSE)

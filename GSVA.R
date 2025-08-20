@@ -42,8 +42,8 @@ write.csv(gsva_results, file.path(data_dir, "GSVA_results.csv"), row.names = TRU
 
 # Calculate t-test statistics for Control vs KO22
 t_results_KO22 <- apply(gsva_results, 1, function(row) {
-  t.test(row[c("Control1_Count", "Control2_Count", "Control3_Count")], 
-         row[c("FIH22KO1_Count", "FIH22KO2_Count", "FIH22KO3_Count")])$statistic
+  t.test(row[c("FIH22KO1_Count", "FIH22KO2_Count", "FIH22KO3_Count")], 
+         row[c("Control1_Count", "Control2_Count", "Control3_Count")])$statistic
 })
 
 # Remove "HALLMARK_" prefix from gene set names
@@ -74,8 +74,8 @@ ggplot(bar_data_KO22, aes(x = reorder(GeneSet, T_Value), y = T_Value, fill = Fil
 
 # Calculate t-test statistics for Control vs KO23
 t_results_KO23 <- apply(gsva_results, 1, function(row) {
-  t.test(row[c("Control1_Count", "Control2_Count", "Control3_Count")], 
-         row[c("FIH23KO1_Count", "FIH23KO2_Count", "FIH23KO3_Count")])$statistic
+  t.test(row[c("FIH23KO1_Count", "FIH23KO2_Count", "FIH23KO3_Count")], 
+         row[c("Control1_Count", "Control2_Count", "Control3_Count")])$statistic
 })
 
 # Remove "HALLMARK_" prefix from gene set names
@@ -85,7 +85,7 @@ names(t_results_KO23) <- sub("HALLMARK_", "", names(t_results_KO23))
 bar_data_KO23 <- data.frame(
   GeneSet = names(t_results_KO23),
   T_Value = unlist(t_results_KO23),
-  FillColor = ifelse(abs(unlist(t_results_KO23)) < 1, "grey", ifelse(unlist(t_results_KO23) > 0, "red", "blue"))
+  FillColor = ifelse(abs(unlist(t_results_KO23)) < 0.05, "grey", ifelse(unlist(t_results_KO23) > 0, "red", "blue"))
 )
 
 # Sort by T value
